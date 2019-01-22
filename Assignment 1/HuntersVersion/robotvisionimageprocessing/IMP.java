@@ -12,6 +12,8 @@ import java.io.File;
 import java.awt.image.PixelGrabber;
 import java.awt.image.MemoryImageSource;
 import java.util.prefs.Preferences;
+import robotvisionimageprocessing.Histogram.ImageHistogramData;
+import robotvisionimageprocessing.Histogram.GUI.HistogramFrame;
 
 class IMP implements MouseListener
 {
@@ -187,7 +189,7 @@ class IMP implements MouseListener
         chooser.setCurrentDirectory(new File(path));
         int option = chooser.showOpenDialog(frame);
      
-        if(option == JFileChooser.APPROVE_OPTION)
+        if (option == JFileChooser.APPROVE_OPTION)
         {
             imageFile = chooser.getSelectedFile();
             pref.put("DEFAULT_PATH", imageFile.getAbsolutePath());
@@ -319,7 +321,6 @@ class IMP implements MouseListener
      */
     private int getPixels(int rgb[])
     {
-        int alpha = 0;
         int rgba = (rgb[0] << 24) | (rgb[1] <<16) | (rgb[2] << 8) | rgb[3];
         return rgba;
     }
@@ -378,6 +379,19 @@ class IMP implements MouseListener
     
     private void generateColorHistogram()
     {
+        ImageHistogramData histogramData = new ImageHistogramData();
+        
+        for (int i = 0; i < imageHeight; i++)
+            for (int j = 0; j < imageWidth; j++)
+            {
+                int[] rgbArray = getPixelArray(pixelArray2D[i][j]);
+                histogramData.incrementRedHistogramTuple(rgbArray[1]);
+                histogramData.incrementGreenHistogramTuple(rgbArray[2]);
+                histogramData.incrementBlueHistogramTuple(rgbArray[3]);
+            }
+        
+        HistogramFrame histogramFrame = new HistogramFrame(histogramData);
+        histogramFrame.drawHistogram();
     }
     
     private void equalize()
