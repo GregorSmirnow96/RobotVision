@@ -5,15 +5,22 @@
  */
 package robotvisionimageprocessing;
 
+import robotvisionimageprocessing.GlobalUtilities.ThreadSafeContainer;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.awt.image.PixelGrabber;
 import java.awt.image.MemoryImageSource;
+import java.util.Collection;
 import java.util.prefs.Preferences;
+import robotvisionimageprocessing.ColorTracking.GUI.ColorTrackingFrame;
+import robotvisionimageprocessing.ColorTracking.IColorTrackingFunction;
+import robotvisionimageprocessing.Equalization.EqualizingFunctionGenerator;
+import robotvisionimageprocessing.Equalization.IEqualizingFunction;
 import robotvisionimageprocessing.Histogram.ImageHistogramData;
 import robotvisionimageprocessing.Histogram.GUI.HistogramFrame;
+import robotvisionimageprocessing.Histogram.IntensityFrequencyTuple;
 
 class IMP implements MouseListener
 {
@@ -31,14 +38,14 @@ class IMP implements MouseListener
     int xPixelIndex;
     int yPixelIndex;
     int[] pixelArray1D;
-    int[] results;
+    int[] originalLoadedPixelArray;
    
     // This will be your height and width of your 2d array
     int imageHeight = 0;
     int imageWidth = 0;
    
     // your 2D array of pixels
-    int[][] pixelArray2D;
+    ThreadSafeContainer<int[][]> pixelArray2DContainer;
 
     /* 
      * In the Constructor I set up the GUI, the frame the menus. The open
@@ -46,6 +53,8 @@ class IMP implements MouseListener
      */
     IMP()
     {
+        this.pixelArray2DContainer = new ThreadSafeContainer<>();
+        
         toolkit = Toolkit.getDefaultToolkit();
         frame = new JFrame("Image Processing Software by Hunter");
         JMenuBar bar = new JMenuBar();
@@ -109,7 +118,6 @@ class IMP implements MouseListener
      * This method creates the pulldown menu and sets up listeners to selection of the menu choices. If the listeners are activated they call the methods 
      * for handling the choice, fun1, fun2, fun3, fun4, etc. etc. 
      */
-   
     private JMenu getFunctions()
     {
         JMenu functionMenu = new JMenu("Functions");
@@ -151,10 +159,10 @@ class IMP implements MouseListener
         });
         functionMenu.add(fifthItem);
 
-        JMenuItem sixthItem = new JMenuItem("Generate Color Histogram");
+        JMenuItem sixthItem = new JMenuItem("Open Color Histogram");
         sixthItem.addActionListener((ActionEvent event) ->
         {
-            generateColorHistogram();
+            openColorHistogram();
         });
         functionMenu.add(sixthItem);
 
@@ -168,7 +176,7 @@ class IMP implements MouseListener
         JMenuItem eighthItem = new JMenuItem("Track Colored Object");
         eighthItem.addActionListener((ActionEvent event) ->
         {
-            trackColoredObject();
+            launchColorTrackingGUI();
         });
         functionMenu.add(eighthItem);
 
@@ -202,7 +210,7 @@ class IMP implements MouseListener
         label.addMouseListener(this);
         pixelArray1D = new int[imageWidth*imageHeight];
      
-        results = new int[imageWidth*imageHeight];
+        originalLoadedPixelArray = new int[imageWidth*imageHeight];
   
         Image image = imageIcon.getImage();
         
@@ -228,7 +236,7 @@ class IMP implements MouseListener
         System.arraycopy(
             pixelArray1D,
             0,
-            results,
+            originalLoadedPixelArray,
             0,
             imageWidth * imageHeight);
         
@@ -236,6 +244,14 @@ class IMP implements MouseListener
         panel.removeAll();
         panel.add(label);
         panel.revalidate();
+        
+        int frameHeightBuffer = 160;
+        int frameWidthBuffer = 45;
+        frame.setPreferredSize(
+            new Dimension(
+                imageWidth + frameWidthBuffer,
+                imageHeight + frameHeightBuffer));
+        frame.pack();
     }
   
     /*
@@ -244,10 +260,14 @@ class IMP implements MouseListener
      */
     private void turnTwoDimensional()
     {
-        pixelArray2D = new int[imageHeight][imageWidth];
-        for(int i=0; i<imageHeight; i++)
-            for(int j=0; j<imageWidth; j++)
-                pixelArray2D[i][j] = pixelArray1D[i*imageWidth+j];
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            pixelArray2DContainer.setValue(new int[imageHeight][imageWidth]);
+            int[][] pixelArray2D = pixelArray2DContainer.getValue();
+            for(int i=0; i<imageHeight; i++)
+                for(int j=0; j<imageWidth; j++)
+                    pixelArray2D[i][j] = pixelArray1D[i*imageWidth+j];
+        });
     }
     
     /*
@@ -256,7 +276,7 @@ class IMP implements MouseListener
     private void reset()
     {
         System.arraycopy(
-            results,
+            originalLoadedPixelArray,
             0,
             pixelArray1D,
             0,
@@ -270,7 +290,8 @@ class IMP implements MouseListener
             imageWidth);
         Image originalImage = toolkit.createImage(memoryImageSource);
 
-        JLabel newLabel = new JLabel(new ImageIcon(originalImage));    
+        JLabel newLabel = new JLabel(new ImageIcon(originalImage));   
+        turnTwoDimensional();
         panel.removeAll();
         panel.add(newLabel);
         panel.revalidate(); 
@@ -281,12 +302,17 @@ class IMP implements MouseListener
      */
     private void resetPicture()
     {
-        for(int i=0; i<imageHeight; i++)
-            System.arraycopy(pixelArray2D[i],
-                0,
-                pixelArray1D,
-                i * imageWidth,
-                imageWidth);
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            int[][] pixelArray2D = pixelArray2DContainer.getValue();
+
+            for(int i = 0; i < imageHeight; i++)
+                System.arraycopy(pixelArray2D[i],
+                    0,
+                    pixelArray1D,
+                    i * imageWidth,
+                    imageWidth);
+        });
         
         MemoryImageSource memoryImageSource = new MemoryImageSource(
             imageWidth,
@@ -327,9 +353,14 @@ class IMP implements MouseListener
   
     public void getValue()
     {
-        int pix = pixelArray2D[yPixelIndex][xPixelIndex];
-        int temp[] = getPixelArray(pix);
-        System.out.println("Color value " + temp[0] + " " + temp[1] + " "+ temp[2] + " " + temp[3]);
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            int[][] pixelArray2D = pixelArray2DContainer.getValue();
+
+            int pix = pixelArray2D[yPixelIndex][xPixelIndex];
+            int temp[] = getPixelArray(pix);
+            System.out.println("Color value " + temp[0] + " " + temp[1] + " "+ temp[2] + " " + temp[3]);
+        });
     }
   
     /**************************************************************************************************
@@ -347,22 +378,35 @@ class IMP implements MouseListener
      */
     private void removeRed()
     {
-        for (int i=0; i<imageHeight; i++)
-            for (int j=0; j<imageWidth; j++)
-            {
-                //get three ints for R, G and B
-                int[] rgbArray = getPixelArray(pixelArray2D[i][j]);
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            int[][] pixelArray2D = pixelArray2DContainer.getValue();
 
-                rgbArray[1] = 0;
-                //take three ints for R, G, B and put them back into a single int
-                pixelArray2D[i][j] = getPixels(rgbArray);
-            } 
-        
-        resetPicture();
+            for (int i=0; i<imageHeight; i++)
+                for (int j=0; j<imageWidth; j++)
+                {
+                    //get three ints for R, G and B
+                    int[] rgbArray = getPixelArray(pixelArray2D[i][j]);
+
+                    rgbArray[1] = 0;
+                    //take three ints for R, G, B and put them back into a single int
+                    pixelArray2D[i][j] = getPixels(rgbArray);
+                }
+
+            resetPicture();
+        });
     }
     
     private void rotate90Degrees()
     {
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            int[][] pixelArray2D = pixelArray2DContainer.getValue();
+
+            // Your code
+
+            resetPicture();
+        });
     }
     
     private void convertToGreyscale()
@@ -377,29 +421,129 @@ class IMP implements MouseListener
     {
     }
     
-    private void generateColorHistogram()
+    private void openColorHistogram()
     {
-        ImageHistogramData histogramData = new ImageHistogramData();
-        
-        for (int i = 0; i < imageHeight; i++)
-            for (int j = 0; j < imageWidth; j++)
-            {
-                int[] rgbArray = getPixelArray(pixelArray2D[i][j]);
-                histogramData.incrementRedHistogramTuple(rgbArray[1]);
-                histogramData.incrementGreenHistogramTuple(rgbArray[2]);
-                histogramData.incrementBlueHistogramTuple(rgbArray[3]);
-            }
-        
-        HistogramFrame histogramFrame = new HistogramFrame(histogramData);
-        histogramFrame.drawHistogram();
+        HistogramFrame histogramFrame = HistogramFrame.getInstance();
+        histogramFrame.setHistogramDataGenerationFunction(
+            this::generateHistogramData);
     }
     
     private void equalize()
     {
+        ImageHistogramData histogramData = generateHistogramData();
+        
+        Collection<IntensityFrequencyTuple> redIntensityFrequencies =
+            histogramData.getRedIntensityFrequencies();
+        Collection<IntensityFrequencyTuple> greenIntensityFrequencies =
+            histogramData.getGreenIntensityFrequencies();
+        Collection<IntensityFrequencyTuple> blueIntensityFrequencies =
+            histogramData.getBlueIntensityFrequencies();
+        
+        EqualizingFunctionGenerator equalizingFunctionGenerator =
+            new EqualizingFunctionGenerator();
+        
+        IEqualizingFunction redEqualizer =
+            equalizingFunctionGenerator
+                .generateFunction(redIntensityFrequencies);
+        IEqualizingFunction greenEqualizer =
+            equalizingFunctionGenerator
+                .generateFunction(greenIntensityFrequencies);
+        IEqualizingFunction blueEqualizer =
+            equalizingFunctionGenerator
+                .generateFunction(blueIntensityFrequencies);
+        
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            int[][] pixelArray2D = pixelArray2DContainer.getValue();
+
+            for (int i = 0; i < imageHeight; i++)
+                for (int j = 0; j < imageWidth; j++)
+                {
+                    int[] rgbArray = getPixelArray(pixelArray2D[i][j]);
+
+                    rgbArray[1] = redEqualizer.equalize(rgbArray[1]);
+                    rgbArray[2] = greenEqualizer.equalize(rgbArray[2]);
+                    rgbArray[3] = blueEqualizer.equalize(rgbArray[3]);
+                    pixelArray2D[i][j] = getPixels(rgbArray);
+                }
+        });
+        
+        resetPicture();
     }
     
-    private void trackColoredObject()
+    private ImageHistogramData generateHistogramData()
     {
+        ImageHistogramData histogramData = new ImageHistogramData();
+        
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            int[][] pixelArray2D = pixelArray2DContainer.getValue();
+
+            for (int i = 0; i < imageHeight; i++)
+                for (int j = 0; j < imageWidth; j++)
+                {
+                    int[] rgbArray = getPixelArray(pixelArray2D[i][j]);
+                    histogramData.incrementRedHistogramTuple(rgbArray[1]);
+                    histogramData.incrementGreenHistogramTuple(rgbArray[2]);
+                    histogramData.incrementBlueHistogramTuple(rgbArray[3]);
+                }
+        });
+        
+        return histogramData;
+    }
+    
+    private void launchColorTrackingGUI()
+    {
+        IColorTrackingFunction trackingFuncton = this::trackColor;
+        ColorTrackingFrame gui = new ColorTrackingFrame(trackingFuncton);
+    }
+    
+    private void trackColor(
+        Color trackedColor,
+        int colorMatchingRange)
+    {
+        System.out.println("Tracking the color:");
+        System.out.println(
+            "(" + trackedColor.getRed() + ", " +
+            trackedColor.getGreen() + ", " +
+            trackedColor.getBlue() + ")");
+        
+        int trackedRed = trackedColor.getRed();
+        int trackedGreen = trackedColor.getGreen();
+        int trackedBlue = trackedColor.getBlue();
+        
+        pixelArray2DContainer.executeCodeAsync(() ->
+        {
+            int[][] array2D = pixelArray2DContainer.getValue();
+
+            for (int i = 0; i < imageHeight; i++)
+                for (int j = 0; j < imageWidth; j++)
+                {
+                    int[] rgbArray = getPixelArray(array2D[i][j]);
+                    int red = rgbArray[1];
+                    int green = rgbArray[2];
+                    int blue = rgbArray[3];
+                    boolean pixelMatchesTrackedColor =
+                        red <= trackedRed + colorMatchingRange &&
+                        red >= trackedRed - colorMatchingRange &&
+                        green <= trackedGreen + colorMatchingRange &&
+                        green >= trackedGreen - colorMatchingRange &&
+                        blue <= trackedBlue + colorMatchingRange &&
+                        blue >= trackedBlue - colorMatchingRange;
+
+                    int newColor = pixelMatchesTrackedColor
+                        ? 255
+                        : 0;
+
+                    rgbArray[1] = newColor;
+                    rgbArray[2] = newColor;
+                    rgbArray[3] = newColor;
+
+                    array2D[i][j] = getPixels(rgbArray);
+                }
+        });
+        
+        resetPicture();
     }
   
 

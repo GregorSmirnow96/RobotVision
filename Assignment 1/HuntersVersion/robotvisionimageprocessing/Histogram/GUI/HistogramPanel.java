@@ -82,6 +82,7 @@ public class HistogramPanel extends JPanel
         currentDrawingColor = histogramColor;
         int highestFrequency = findHighestFrequency(intensityFrequencies);
         
+        lines.clear();
         for (int i = 0; i < 256; i++)
         {
             int currentFrequency = intensityFrequencies[i];

@@ -5,6 +5,8 @@
  */
 package robotvisionimageprocessing.Histogram.GUI;
 
+import robotvisionimageprocessing.GlobalUtilities.FunctionalInterfaces.IHistogramDataGeneratorFunction;
+import robotvisionimageprocessing.Histogram.HistogramUpdaterThread;
 import java.awt.Color;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -18,16 +20,38 @@ import robotvisionimageprocessing.Histogram.IntensityFrequencyTuple;
  */
 public class HistogramFrame extends JFrame
 {
+    /* Instance used for the Singleton pattern */
+    private static HistogramFrame instance;
+    
     /* HistogramPanels for each of the 3 colors (RGB). */
     private final HistogramPanel redHistogramPanel;
     private final HistogramPanel greenHistogramPanel;
     private final HistogramPanel blueHistogramPanel;
     /* A container for the data represented in the 3 histograms. */
-    private final ImageHistogramData imageHistogramData;
+    private ImageHistogramData imageHistogramData;
+    /* The method used to update the histogram chart. */
+    private IHistogramDataGeneratorFunction updateHistogramDataFunction;
+    /* A thread that continuously updates the histogram chart. */
+    HistogramUpdaterThread histogramUpdater;
     
-    public HistogramFrame(ImageHistogramData imageHistogramData)
+    /**
+     * @summary
+     *  The static method used to get the single instance of this class.
+     * @return
+     *  The singleton instance of this class.
+     */
+    public static HistogramFrame getInstance()
     {
-        this.imageHistogramData = imageHistogramData;
+        if (instance != null)
+            instance.setVisible(true);
+        
+        return instance == null
+            ? instance = new HistogramFrame()
+            : instance;
+    }
+    
+    private HistogramFrame()
+    {
         this.redHistogramPanel = new HistogramPanel();
         this.greenHistogramPanel = new HistogramPanel();
         this.blueHistogramPanel = new HistogramPanel();
@@ -40,6 +64,21 @@ public class HistogramFrame extends JFrame
         
         this.pack();
         this.setVisible(true);
+        
+        this.histogramUpdater = new HistogramUpdaterThread(this);
+        histogramUpdater.start();
+    }
+    
+    /**
+     * @summary
+     *  A setter for the histogram data generation function.
+     * @param updateHistogramDataFunction
+     *  The function used to update the histogram's displayed data.
+     */
+    public void setHistogramDataGenerationFunction(
+        IHistogramDataGeneratorFunction updateHistogramDataFunction)
+    {
+        this.updateHistogramDataFunction = updateHistogramDataFunction;
     }
     
     /**
@@ -48,6 +87,12 @@ public class HistogramFrame extends JFrame
      */
     public void drawHistogram()
     {
+        if (updateHistogramDataFunction == null)
+            return;
+        
+        imageHistogramData =
+            updateHistogramDataFunction.generateHistogramData();
+        
         int[][] rgbIntensities = getRGBIntensities();
         
         /* This is a result of a mistake I couldn't fix. The HistogramPanels'
@@ -60,12 +105,16 @@ public class HistogramFrame extends JFrame
         redHistogramPanel.drawHistogram(
             redIntensities,
             Color.RED);
+        int[] greenIntensities = rgbIntensities[1];
         greenHistogramPanel.drawHistogram(
-            rgbIntensities[1],
+            greenIntensities,
             Color.GREEN);
+        int[] blueIntensities = rgbIntensities[2];
         blueHistogramPanel.drawHistogram(
-            rgbIntensities[2],
+            blueIntensities,
             Color.BLUE);
+        
+        this.repaint();
     }
     
     /**
