@@ -9,7 +9,7 @@ package robotvisionimageprocessing;
  *
  * @author im5no
  */
-public class RobotVisionImageProcessing
+public class RobotVisionimageProcessing
 {
     /**
      * @param args the command line arguments

@@ -8,13 +8,12 @@ package robotvisionimageprocessing.GlobalUtilities.PatternInterfaces;
 /**
  *
  * @author im5no
- * @param <TObservered>
  */
-public interface IObserver <TObservered>
+public interface IObserver
 {
-    public void subscribe(ISubject<TObservered> subject);
+    public void subscribe(ISubject subject);
     
-    public void unscubscribe(ISubject<TObservered> subject);
+    public void unscubscribe(ISubject subject);
     
-    public void updateValue(TObservered newValue);
+    public void updateValue(int newValue);
 }

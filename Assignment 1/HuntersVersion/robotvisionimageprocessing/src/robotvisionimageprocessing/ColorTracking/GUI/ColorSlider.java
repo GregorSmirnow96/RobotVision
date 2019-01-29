@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package robotvisionimageprocessing.ColorTracking.GUI.ColorSelection;
+package robotvisionimageprocessing.ColorTracking.GUI;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,9 +17,7 @@ import robotvisionimageprocessing.GlobalUtilities.PatternInterfaces.ISubject;
  */
 public class ColorSlider
     extends JSlider
-    implements
-        IObserver<Integer>,
-        ISubject<Integer>
+    implements IObserver, ISubject
 {
     private static final int MINIMUM_VALUE = 0;
     private static final int MAXIMUM_VALUE = 255;
@@ -28,7 +26,8 @@ public class ColorSlider
     private static final int INITIAL_VALUE = 0;
     
     private final Collection<IObserver> observers;
-    private ISubject<Integer> observedSubject;
+    private ISubject observedSubject;
+    private int previousValue;
     
     public ColorSlider()
     {
@@ -40,6 +39,8 @@ public class ColorSlider
         setMinorTickSpacing(MINOR_TICK_SPACING);
         setMajorTickSpacing(MAJOR_TICK_SPACING);
         
+        this.previousValue = -1;
+        
         addChangeListener(changeEvent ->
         {
             notifySubscribers();
@@ -49,12 +50,9 @@ public class ColorSlider
         
         setVisible(true);
     }
-    
-    
-    /* Implementation of the IObserver / ISubscriber interfaces */
 
     @Override
-    public void subscribe(ISubject<Integer> subject)
+    public void subscribe(ISubject subject)
     {
         if (observedSubject != null)
             observedSubject.unregister(this);
@@ -64,13 +62,13 @@ public class ColorSlider
     }
 
     @Override
-    public void unscubscribe(ISubject<Integer> subject)
+    public void unscubscribe(ISubject subject)
     {
         subject.unregister(this);
     }
 
     @Override
-    public void updateValue(Integer newValue)
+    public void updateValue(int newValue)
     {
         setValue(newValue);
     }
@@ -90,6 +88,11 @@ public class ColorSlider
     @Override
     public void notifySubscribers()
     {
-        observers.forEach(observer -> observer.updateValue(getValue()));
+        if (previousValue == getValue())
+            observers.forEach(
+                observer ->
+                    observer.updateValue(getValue()));
+        
+        previousValue = getValue();
     }
 }

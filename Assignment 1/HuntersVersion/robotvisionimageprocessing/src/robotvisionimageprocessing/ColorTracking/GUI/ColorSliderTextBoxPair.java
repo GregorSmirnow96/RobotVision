@@ -3,10 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package robotvisionimageprocessing.ColorTracking.GUI.ColorSelection;
+package robotvisionimageprocessing.ColorTracking.GUI;
 
 import javax.swing.JPanel;
-import robotvisionimageprocessing.GlobalUtilities.PatternInterfaces.IObserver;
 
 /**
  *
@@ -33,11 +32,5 @@ public class ColorSliderTextBoxPair extends JPanel
     public int getValue()
     {
         return slider.getValue();
-    }
-
-    public void registerObserverToSlider(
-        IObserver<Integer> colorTrackedImageFrame)
-    {
-        slider.register(colorTrackedImageFrame);
     }
 }
