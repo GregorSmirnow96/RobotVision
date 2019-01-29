@@ -8,12 +8,13 @@ package robotvisionimageprocessing.GlobalUtilities.PatternInterfaces;
 /**
  *
  * @author im5no
+ * @param <TObservered>
  */
-public interface ISubject
+public interface ISubject <TObservered>
 {
-    public void register(IObserver observer);
+    public void register(IObserver<TObservered> observer);
     
-    public void unregister(IObserver observer);
+    public void unregister(IObserver<TObservered> observer);
     
     public void notifySubscribers();
 }

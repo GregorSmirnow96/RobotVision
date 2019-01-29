@@ -6,10 +6,11 @@
 package robotvisionimageprocessing.Histogram.GUI;
 
 import robotvisionimageprocessing.GlobalUtilities.FunctionalInterfaces.IHistogramDataGeneratorFunction;
-import robotvisionimageprocessing.Histogram.HistogramUpdaterThread;
 import java.awt.Color;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import robotvisionimageprocessing.GlobalUtilities.PatternInterfaces.IObserver;
+import robotvisionimageprocessing.GlobalUtilities.PatternInterfaces.ISubject;
 import robotvisionimageprocessing.Histogram.ImageHistogramData;
 import robotvisionimageprocessing.Histogram.IntensityFrequencyTuple;
 
@@ -18,7 +19,7 @@ import robotvisionimageprocessing.Histogram.IntensityFrequencyTuple;
  *  The JFrame which contains the 3 HistogramPanels generated for an image.
  * @author im5no
  */
-public class HistogramFrame extends JFrame
+public class HistogramFrame extends JFrame implements IObserver
 {
     /* Instance used for the Singleton pattern */
     private static HistogramFrame instance;
@@ -31,8 +32,6 @@ public class HistogramFrame extends JFrame
     private ImageHistogramData imageHistogramData;
     /* The method used to update the histogram chart. */
     private IHistogramDataGeneratorFunction updateHistogramDataFunction;
-    /* A thread that continuously updates the histogram chart. */
-    HistogramUpdaterThread histogramUpdater;
     
     /**
      * @summary
@@ -64,9 +63,6 @@ public class HistogramFrame extends JFrame
         
         this.pack();
         this.setVisible(true);
-        
-        this.histogramUpdater = new HistogramUpdaterThread(this);
-        histogramUpdater.start();
     }
     
     /**
@@ -151,5 +147,26 @@ public class HistogramFrame extends JFrame
             greenIntensities,
             blueIntensities
         };
+    }
+
+    
+    /* Implementation of the IObserver interface */
+    
+    @Override
+    public void subscribe(ISubject subject)
+    {
+        subject.register(this);
+    }
+
+    @Override
+    public void unscubscribe(ISubject subject)
+    {
+        subject.unregister(this);
+    }
+
+    @Override
+    public void updateValue(Object newValue)
+    {
+        drawHistogram();
     }
 }
