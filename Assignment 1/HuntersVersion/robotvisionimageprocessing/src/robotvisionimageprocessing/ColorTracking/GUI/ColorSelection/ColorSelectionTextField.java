@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package robotvisionimageprocessing.ColorTracking.GUI;
+package robotvisionimageprocessing.ColorTracking.GUI.ColorSelection;
 
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -16,13 +16,14 @@ import robotvisionimageprocessing.GlobalUtilities.PatternInterfaces.ISubject;
 /**
  *
  * @author im5no
+ * @param <TObservered>
  */
-public class ColorSelectionTextField
+public class ColorSelectionTextField <TObservered>
     extends JTextField
-    implements IObserver, ISubject
+    implements IObserver<TObservered>, ISubject<TObservered>
 {
     private final Collection<IObserver> observers;
-    private ISubject observedSubject;
+    private ISubject<TObservered> observedSubject;
     private String previousValue = "";
     
     public ColorSelectionTextField()
@@ -49,26 +50,26 @@ public class ColorSelectionTextField
     }
 
     @Override
-    public void unscubscribe(ISubject subject)
+    public void unscubscribe(ISubject<TObservered> subject)
     {
         subject.unregister(this);
     }
 
     @Override
-    public void updateValue(int newValue)
+    public void updateValue(TObservered newValue)
     {
         String newValueAsString = ((Integer) newValue).toString();
         this.setText(newValueAsString);
     }
 
     @Override
-    public void register(IObserver observer)
+    public void register(IObserver<TObservered> observer)
     {
         observers.add(observer);
     }
 
     @Override
-    public void unregister(IObserver observer)
+    public void unregister(IObserver<TObservered> observer)
     {
         observers.remove(observer);
     }

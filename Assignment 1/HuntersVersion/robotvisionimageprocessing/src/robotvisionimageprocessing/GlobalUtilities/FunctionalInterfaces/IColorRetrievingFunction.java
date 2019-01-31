@@ -3,17 +3,16 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package robotvisionimageprocessing.ColorTracking;
+package robotvisionimageprocessing.GlobalUtilities.FunctionalInterfaces;
 
 import java.awt.Color;
 
 /**
- *
+ * @summary
+ *  A functional interface for a method that returns a Color.
  * @author im5no
  */
-public interface IColorTrackingFunction
+public interface IColorRetrievingFunction
 {
-    public void trackColor(
-        Color trackedColor,
-        int colorMatchingRange);
+    public Color getColor();
 }
