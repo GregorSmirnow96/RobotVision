@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.prefs.Preferences;
 import robotvisionimageprocessing.ColorTracking.GUI.ColorTrackingGUI;
+import robotvisionimageprocessing.EdgeDetection.EdgeDetector;
 import robotvisionimageprocessing.Equalization.EqualizingFunctionGenerator;
 import robotvisionimageprocessing.Equalization.IEqualizingFunction;
 import robotvisionimageprocessing.GlobalUtilities.PatternInterfaces.IObserver;
@@ -156,11 +157,10 @@ class IMP
         });
         functionMenu.add(fourthItem);
 
-        JMenuItem fifthItem = new JMenuItem("Detect Edges (5x5 Mask)");
+        JMenuItem fifthItem = new JMenuItem("Detect Edges (Sobel)");
         fifthItem.addActionListener((ActionEvent event) ->
         {
-            int edgeDetectionMaskDimension = 5;
-            detectEdges(edgeDetectionMaskDimension);
+            detectEdges();
         });
         functionMenu.add(fifthItem);
 
@@ -476,8 +476,30 @@ class IMP
         resetPicture();
     }
     
-    private void detectEdges(int maskDimension)
+    private void detectEdges()
     {
+        EdgeDetector edgeDetector = new EdgeDetector(pixelArray2D);
+        
+        int[][] edges = edgeDetector.calculateEdges();
+        
+        for (int i = 0; i < imageHeight; i++)
+            for (int j = 0; j < imageWidth; j++)
+            {
+                if (i >= edges.length || j >= edges[0].length)
+                    continue;
+                
+                int newColor = edges[i][j];
+                //get three ints for R, G and B
+                int[] rgbArray = new int[4];
+                rgbArray[0] = 255;
+                rgbArray[1] = newColor;
+                rgbArray[2] = newColor;
+                rgbArray[3] = newColor;
+                //take three ints for R, G, B and put them back into a single int
+                pixelArray2D[i][j] = getPixels(rgbArray);
+            }
+        
+        resetPicture();
     }
     
     private void openColorHistogram()

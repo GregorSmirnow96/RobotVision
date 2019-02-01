@@ -72,12 +72,6 @@ public class ColorTrackedImageFrame extends JFrame implements IObserver<Object>
         int imageWidth = pretrackedImageData[0].length;
         pixelArray2D = new int[imageHeight][imageWidth];
         
-        System.out.println("Tracking the color:");
-        System.out.println(
-            "(" + trackedColor.getRed() + ", " +
-            trackedColor.getGreen() + ", " +
-            trackedColor.getBlue() + ")");
-        
         int trackedRed = trackedColor.getRed();
         int trackedGreen = trackedColor.getGreen();
         int trackedBlue = trackedColor.getBlue();
