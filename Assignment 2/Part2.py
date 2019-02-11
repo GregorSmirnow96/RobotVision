@@ -23,9 +23,10 @@ def get_time_weighted_average_of_image(
     return tracked_motion
 
 def blur_image(image):
+    kernel_dimension = 5
     kernel = numpy.ones(
-        (7, 7),
-        numpy.float32) / 49
+        (kernel_dimension, kernel_dimension),
+        numpy.float32) / kernel_dimension * kernel_dimension
     blurred_image = cv2.filter2D(
         image,
         -1,
@@ -38,7 +39,7 @@ def get_thresholded_grayscale_image(image):
         cv2.COLOR_BGR2GRAY)
     _, low_threshold = cv2.threshold(
         tracked_motion,
-        8,
+        16,
         24,
         cv2.THRESH_BINARY)
     blurred_threshold = blur_image(low_threshold)
