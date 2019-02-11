@@ -26,7 +26,7 @@ def blur_image(image):
     kernel_dimension = 5
     kernel = numpy.ones(
         (kernel_dimension, kernel_dimension),
-        numpy.float32) / kernel_dimension * kernel_dimension
+        numpy.float32) / (kernel_dimension * kernel_dimension)
     blurred_image = cv2.filter2D(
         image,
         -1,
