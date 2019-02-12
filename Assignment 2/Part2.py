@@ -15,11 +15,11 @@ def get_time_weighted_average_of_image(
     cv2.accumulateWeighted(
         blurred_image,
         weighted_average,
-        0.3)
+        0.32)
     tracked_motion = cv2.convertScaleAbs(weighted_average)
     tracked_motion = cv2.absdiff(
         tracked_motion,
-        image)
+        blurred_image)
     return tracked_motion
 
 def blur_image(image):
@@ -39,14 +39,14 @@ def get_thresholded_grayscale_image(image):
         cv2.COLOR_BGR2GRAY)
     _, low_threshold = cv2.threshold(
         tracked_motion,
-        16,
+        10,
         63,
         cv2.THRESH_BINARY)
     blurred_threshold = blur_image(low_threshold)
     _, high_threshold = cv2.threshold(
         blurred_threshold,
-        31,
-        63,
+        0,
+        51,
         cv2.THRESH_BINARY)
     return high_threshold
     
@@ -61,17 +61,33 @@ def get_contours(grayscale_image):
             large_contours.append(contour)
     return contours
 
-def draw_bounding_boxes(
-    thresholded_grayscale_image,
+def draw_contours(
+    image,
     contours):
+    new_image = image.copy()
+    cv2.drawContours(
+        new_image,
+        contours,
+        -1,
+        (255, 0, 0),
+        1)
+    return new_image
+
+def draw_bounding_boxes(
+    image,
+    contours):
+    new_image = image.copy()
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-        thresholded_grayscale_image = cv2.rectangle(
-            thresholded_grayscale_image,
-            (x, y),
-            (x + w, y + h),
-            (255, 0, 0),
-            2)
+        area = w * h
+        if (area > 4000):
+            new_image = cv2.rectangle(
+                new_image,
+                (x, y),
+                (x + w, y + h),
+                (255, 255, 0),
+                2)
+    return new_image
 
 
 # Program starts here
@@ -89,14 +105,23 @@ while True:
     thresholded_grayscale_image = get_thresholded_grayscale_image(
         time_weighted_average)
     contours = get_contours(thresholded_grayscale_image)
-    draw_bounding_boxes(
+    image_with_contours = draw_contours(
         thresholded_grayscale_image,
+        contours)
+    image_with_bounding_boxes = draw_bounding_boxes(
+        image,
         contours)
 
     
     cv2.imshow(
         "Tracked Movement",
+        image_with_bounding_boxes)
+    cv2.imshow(
+        "Thresholded Grayscale",
         thresholded_grayscale_image)
+    cv2.imshow(
+        "Contours",
+        image_with_contours)
 
     selectedKeyID = cv2.waitKey(1)
     if selectedKeyID == escape_key_id:
