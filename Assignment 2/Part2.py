@@ -15,7 +15,7 @@ def get_time_weighted_average_of_image(
     cv2.accumulateWeighted(
         blurred_image,
         weighted_average,
-        0.32)
+        0.3)
     tracked_motion = cv2.convertScaleAbs(weighted_average)
     tracked_motion = cv2.absdiff(
         tracked_motion,
@@ -40,27 +40,38 @@ def get_thresholded_grayscale_image(image):
     _, low_threshold = cv2.threshold(
         tracked_motion,
         16,
-        24,
+        63,
         cv2.THRESH_BINARY)
     blurred_threshold = blur_image(low_threshold)
     _, high_threshold = cv2.threshold(
         blurred_threshold,
-        22,
-        24,
+        31,
+        63,
         cv2.THRESH_BINARY)
     return high_threshold
     
-def draw_contours(grayscale_image):
+def get_contours(grayscale_image):
     contours, _ = cv2.findContours(
         grayscale_image,
         cv2.RETR_EXTERNAL,
         cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(
-        grayscale_image,
-        contours,
-        -1,
-        (255, 0, 0),
-        1)
+    large_contours = []
+    for contour in contours:
+        if (cv2.contourArea(contour) > 80):
+            large_contours.append(contour)
+    return contours
+
+def draw_bounding_boxes(
+    thresholded_grayscale_image,
+    contours):
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        thresholded_grayscale_image = cv2.rectangle(
+            thresholded_grayscale_image,
+            (x, y),
+            (x + w, y + h),
+            (255, 0, 0),
+            2)
 
 
 # Program starts here
@@ -71,19 +82,22 @@ weighted_average = numpy.float32(image)
 
 while True:
     _, image = video_feed.read()
-    
+
     time_weighted_average = get_time_weighted_average_of_image(
         image,
         weighted_average)
     thresholded_grayscale_image = get_thresholded_grayscale_image(
         time_weighted_average)
-    draw_contours(thresholded_grayscale_image)
-    
+    contours = get_contours(thresholded_grayscale_image)
+    draw_bounding_boxes(
+        thresholded_grayscale_image,
+        contours)
+
     
     cv2.imshow(
         "Tracked Movement",
         thresholded_grayscale_image)
-    
+
     selectedKeyID = cv2.waitKey(1)
     if selectedKeyID == escape_key_id:
         break
